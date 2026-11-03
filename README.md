@@ -125,7 +125,8 @@ every request to that function.
 2. Import the repository in Vercel (framework preset: **Other**).
 3. Build command: `npm run build`. Output: none (serverless functions only).
 4. Add the environment variables below.
-5. Deploy. Vercel prints the public API URL, e.g. `https://booknook-server.vercel.app`.
+5. Deploy. Vercel prints the public API URL, e.g. `https://booknook-server-weld.vercel.app`
+   (this project's production alias).
 
 ### Environment variables
 
@@ -143,10 +144,37 @@ every request to that function.
 After deploying, set the client's `NEXT_PUBLIC_API_URL` / `API_URL` to the
 Vercel API URL and redeploy the client so the JWT audience matches.
 
+The client must also point its Better Auth client and server at the
+**client's own origin**, not the API server — Better Auth routes live on the
+Next.js app (`/api/auth/[...all]`). Setting the client's `NEXT_PUBLIC_APP_URL`
+or `BETTER_AUTH_URL` to the API URL makes every auth request hit the API
+server, where it returns `404`. The values must match:
+
+| Client variable | Must equal | Server variable |
+|---|---|---|
+| `BETTER_AUTH_URL` (issuer) | `JWT_ISSUER` | `JWT_ISSUER` |
+| `API_URL` (audience) | `JWT_AUDIENCE` | `JWT_AUDIENCE` |
+
+```text
+# client (production)
+NEXT_PUBLIC_APP_URL=https://<your-client>.vercel.app
+BETTER_AUTH_URL=https://<your-client>.vercel.app
+NEXT_PUBLIC_API_URL=https://<your-api>.vercel.app
+API_URL=https://<your-api>.vercel.app
+# server (production)
+JWT_JWKS_URL=https://<your-client>.vercel.app/api/auth/jwks
+JWT_ISSUER=https://<your-client>.vercel.app
+JWT_AUDIENCE=https://<your-api>.vercel.app
+```
+
+Note: `NEXT_PUBLIC_*` variables are inlined at build time, so the client must
+be redeployed after changing them; serverless env changes also require a new
+deployment to take effect.
+
 Verify the deployment:
 
 ```text
-GET https://booknook-server.vercel.app/health
+GET https://booknook-server-weld.vercel.app/health
 ```
 
 ## 🔒 Security
