@@ -10,7 +10,6 @@ const sampleBooks = [
     description:
       "A classic novel exploring wealth, love, ambition and the American Dream.",
     image: "https://placehold.co/400x600?text=The+Great+Gatsby",
-    price: 450,
     totalCopies: 10,
     availableCopies: 10,
     ownerName: "BookNook Demo",
@@ -23,7 +22,6 @@ const sampleBooks = [
     description:
       "A practical guide to building good habits and breaking bad ones.",
     image: "https://placehold.co/400x600?text=Atomic+Habits",
-    price: 550,
     totalCopies: 8,
     availableCopies: 8,
     ownerName: "BookNook Demo",
@@ -36,7 +34,6 @@ const sampleBooks = [
     description:
       "A philosophical story about following your dreams and discovering your purpose.",
     image: "https://placehold.co/400x600?text=The+Alchemist",
-    price: 400,
     totalCopies: 12,
     availableCopies: 12,
     ownerName: "BookNook Demo",
@@ -49,7 +46,6 @@ const sampleBooks = [
     description:
       "An exploration of human history, from early humans to the modern world.",
     image: "https://placehold.co/400x600?text=Sapiens",
-    price: 650,
     totalCopies: 6,
     availableCopies: 6,
     ownerName: "BookNook Demo",
@@ -62,7 +58,6 @@ const sampleBooks = [
     description:
       "A guide to writing readable, maintainable and professional software.",
     image: "https://placehold.co/400x600?text=Clean+Code",
-    price: 750,
     totalCopies: 5,
     availableCopies: 5,
     ownerName: "BookNook Demo",
@@ -75,7 +70,6 @@ const sampleBooks = [
     description:
       "An introduction to the universe, black holes, time and modern cosmology.",
     image: "https://placehold.co/400x600?text=Brief+History+of+Time",
-    price: 600,
     totalCopies: 7,
     availableCopies: 7,
     ownerName: "BookNook Demo",
@@ -99,6 +93,11 @@ async function seedBooks() {
     }
 
     const now = new Date();
+
+    // Step 1: Remove all existing books
+    const deleteResult = await booksCollection.deleteMany({});
+
+  console.log(`${deleteResult.deletedCount} old books removed.`);
 
     const booksWithTimestamps = sampleBooks.map((book) => ({
       ...book,

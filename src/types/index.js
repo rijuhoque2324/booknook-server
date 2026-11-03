@@ -1,39 +1,15 @@
-
-export interface Book {
-  _id?: string;
-
-  title: string;
-  author: string;
-  category: string;
-  description: string;
-
-  image: string;
-  price: number;
-
-  totalCopies: number;
-  availableCopies: number;
-
-  ownerName: string;
-  ownerEmail: string;
-
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface Borrow {
-  _id?: string;
-
-  bookId: string;
-  bookTitle: string;
-
-  userName: string;
-  userEmail: string;
-
-  borrowDate: Date;
-  returnDate: Date;
-
-  status: "active" | "returned";
-
-  createdAt: Date;
-  updatedAt: Date;
-}
+/**
+ * @typedef {Object} Book
+ * @property {string} _id
+ * @property {string} title
+ * @property {string} author
+ * @property {string} category
+ * @property {string} description
+ * @property {string} image
+ * @property {number} totalCopies
+ * @property {number} availableCopies
+ * @property {string} ownerName
+ * @property {string} ownerEmail
+ * @property {string} createdAt
+ * @property {string} updatedAt
+ */
