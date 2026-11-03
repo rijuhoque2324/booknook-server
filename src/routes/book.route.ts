@@ -1,25 +1,29 @@
+
 import { Router } from "express";
-import { validateRequest } from "../middleware/validate.middleware.js";
-import { createBookSchema, updateBookSchema } from "../validators/book.validator.js";
 
 import {
   getBooks,
   getSingleBook,
   createBook,
   updateBook,
-  deleteBook ,
+  deleteBook,
 } from "../controllers/book.controller.js";
+
 import { verifyToken } from "../middleware/verifyToken.js";
+import { validateRequest } from "../middleware/validate.middleware.js";
+
+import {
+  createBookSchema,
+  updateBookSchema,
+} from "../validators/book.validator.js";
 
 const router = Router();
 
-// GET /books
+// Public routes
 router.get("/", getBooks);
-
-// GET /books/:id
 router.get("/:id", getSingleBook);
 
-// POST /books
+// Protected routes
 router.post(
   "/",
   verifyToken,
@@ -27,10 +31,17 @@ router.post(
   createBook
 );
 
-// PATCH /books/:id
-router.patch("/:id", validateRequest(updateBookSchema), updateBook);
+router.patch(
+  "/:id",
+  verifyToken,
+  validateRequest(updateBookSchema),
+  updateBook
+);
 
-//Delete book
-router.delete("/:id", verifyToken, deleteBook);
+router.delete(
+  "/:id",
+  verifyToken,
+  deleteBook
+);
 
 export default router;

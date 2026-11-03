@@ -163,7 +163,7 @@ export async function deleteBook(
     }
 
     // Only the authenticated owner can delete their book.
-    const result = await deleteBookById(id, user.email);
+    const result = await deleteBookById(id);
 
     if (!result.success) {
       switch (result.reason) {
