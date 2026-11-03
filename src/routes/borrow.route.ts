@@ -20,7 +20,8 @@ router.use(verifyToken);
 
 router.post(
   "/",
-  validateRequest(createBorrowSchema),
+  verifyToken,
+  validateRequest(createBorrowSchema, "body"),
   createBorrowController
 );
 
@@ -31,7 +32,8 @@ router.get(
 
 router.delete(
   "/:id",
-  validateRequest(returnBorrowSchema),
+  verifyToken,
+  validateRequest(returnBorrowSchema, "params"),
   returnBorrowController
 );
 

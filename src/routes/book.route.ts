@@ -27,14 +27,14 @@ router.get("/:id", getSingleBook);
 router.post(
   "/",
   verifyToken,
-  validateRequest(createBookSchema),
+  validateRequest(createBookSchema, "body"),
   createBook
 );
 
 router.patch(
   "/:id",
   verifyToken,
-  validateRequest(updateBookSchema),
+  validateRequest(updateBookSchema, "body"),
   updateBook
 );
 

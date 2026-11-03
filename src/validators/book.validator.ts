@@ -1,5 +1,7 @@
 
 import { z } from "zod";
+export type CreateBookInput = z.infer<typeof createBookSchema>;
+export type UpdateBookInput = z.infer<typeof updateBookSchema>;
 
 export const createBookSchema = z.object({
   title: z.string().trim().min(2).max(150),
