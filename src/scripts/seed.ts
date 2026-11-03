@@ -94,11 +94,6 @@ async function seedBooks() {
 
     const now = new Date();
 
-    // Step 1: Remove all existing books
-    const deleteResult = await booksCollection.deleteMany({});
-
-  console.log(`${deleteResult.deletedCount} old books removed.`);
-
     const booksWithTimestamps = sampleBooks.map((book) => ({
       ...book,
       createdAt: now,

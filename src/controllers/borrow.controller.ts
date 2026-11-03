@@ -65,6 +65,18 @@ export async function createBorrowController(
             message: "Invalid book ID.",
           });
 
+        case "BOOK_NOT_FOUND":
+          return res.status(404).json({
+            success: false,
+            message: "Book not found.",
+          });
+
+        case "INVALID_BORROWER":
+          return res.status(400).json({
+            success: false,
+            message: "Borrower information is missing.",
+          });
+
         case "ALREADY_BORROWED":
           return res.status(409).json({
             success: false,
@@ -154,7 +166,6 @@ export async function returnBorrowController(
     }
 
     const borrow = await returnBorrow(borrowId, user.id);
-
     return res.status(200).json({
       success: true,
       message: "Book returned successfully.",

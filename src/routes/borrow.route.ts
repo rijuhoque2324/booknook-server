@@ -16,23 +16,19 @@ import {
 
 const router = Router();
 
+// Every borrow endpoint requires authentication.
 router.use(verifyToken);
 
 router.post(
   "/",
-  verifyToken,
   validateRequest(createBorrowSchema, "body"),
   createBorrowController
 );
 
-router.get(
-  "/",
-  getMyBorrowsController
-);
+router.get("/", getMyBorrowsController);
 
 router.delete(
   "/:id",
-  verifyToken,
   validateRequest(returnBorrowSchema, "params"),
   returnBorrowController
 );

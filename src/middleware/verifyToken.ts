@@ -1,12 +1,8 @@
-
 import type { Request, Response, NextFunction } from "express";
-import {
-  createRemoteJWKSet,
-  jwtVerify,
-  decodeJwt,
-} from "jose";
+import { createRemoteJWKSet, jwtVerify } from "jose";
 
-// Extend Express Request type
+import { ApiError } from "../utils/api-error.js";
+
 declare global {
   namespace Express {
     interface Request {
@@ -19,82 +15,84 @@ declare global {
   }
 }
 
-// Environment variables
-const JWKS_URL = process.env.JWT_JWKS_URL;
-const JWT_ISSUER = process.env.JWT_ISSUER;
-const JWT_AUDIENCE = process.env.JWT_AUDIENCE;
-
-// Validate environment configuration
-if (!JWKS_URL || !JWT_ISSUER || !JWT_AUDIENCE) {
-  throw new Error(
-    "Missing JWT environment variables: JWT_JWKS_URL, JWT_ISSUER, JWT_AUDIENCE"
-  );
+interface JwtConfig {
+  jwks: ReturnType<typeof createRemoteJWKSet>;
+  issuer: string;
+  audience: string;
 }
 
-// Create remote JWKS
-const JWKS = createRemoteJWKSet(new URL(JWKS_URL));
+let cachedConfig: JwtConfig | null = null;
 
-// Authentication middleware
+/**
+ * Read JWT settings lazily so a missing environment variable only affects
+ * protected routes instead of crashing the whole function at import time.
+ */
+function getJwtConfig(): JwtConfig {
+  if (cachedConfig) {
+    return cachedConfig;
+  }
+
+  const jwksUrl = process.env.JWT_JWKS_URL;
+  const issuer = process.env.JWT_ISSUER;
+  const audience = process.env.JWT_AUDIENCE;
+
+  if (!jwksUrl || !issuer || !audience) {
+    throw new ApiError(
+      500,
+      "Authentication is not configured on the server. Set JWT_JWKS_URL, JWT_ISSUER and JWT_AUDIENCE."
+    );
+  }
+
+  cachedConfig = {
+    jwks: createRemoteJWKSet(new URL(jwksUrl)),
+    issuer,
+    audience,
+  };
+
+  return cachedConfig;
+}
+
 export async function verifyToken(
   req: Request,
   res: Response,
   next: NextFunction
 ) {
   try {
+    const { jwks, issuer, audience } = getJwtConfig();
+
     const authHeader = req.headers.authorization;
 
-    // Check Authorization header
     if (!authHeader?.startsWith("Bearer ")) {
       return res.status(401).json({
         success: false,
-        message: "Authentication token is required.",
+        message: "Authentication token required.",
       });
     }
 
     const token = authHeader.slice(7).trim();
 
-    // Diagnostic only: decoded claims are NOT trusted until jwtVerify succeeds.
-    const unverifiedPayload = decodeJwt(token);
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication token is empty.",
+      });
+    }
 
-    console.log("JWT DIAGNOSTICS:", {
-    tokenIssuer: unverifiedPayload.iss,
-    tokenAudience: unverifiedPayload.aud,
-    tokenSubject: unverifiedPayload.sub,
-    tokenExpiry: unverifiedPayload.exp
-        ? new Date(unverifiedPayload.exp * 1000).toISOString()
-        : null,
-
-    expectedIssuer: JWT_ISSUER,
-    expectedAudience: JWT_AUDIENCE,
+    const { payload } = await jwtVerify(token, jwks, {
+      issuer,
+      audience,
     });
 
-    // Actual cryptographic verification
-    const { payload } = await jwtVerify(token, JWKS, {
-    issuer: JWT_ISSUER,
-    audience: JWT_AUDIENCE,
-    });
-
-    console.log("JWT VERIFIED:", {
-    id: payload.sub,
-    email: payload.email,
-    });
-    // Validate required user claims
     if (
       typeof payload.sub !== "string" ||
       typeof payload.email !== "string"
     ) {
-      console.error("JWT missing required claims:", {
-        hasSub: typeof payload.sub === "string",
-        hasEmail: typeof payload.email === "string",
-      });
-
       return res.status(401).json({
         success: false,
         message: "Required user information is missing from token.",
       });
     }
 
-    // Attach authenticated user to Express request
     req.user = {
       id: payload.sub,
       email: payload.email,
@@ -106,12 +104,19 @@ export async function verifyToken(
 
     return next();
   } catch (error) {
-        console.error("JWT ERROR NAME:", error instanceof Error ? error.name : error);
-        console.error("JWT ERROR MESSAGE:", error instanceof Error ? error.message : error);
-
-        return res.status(401).json({
-            success: false,
-            message: "Invalid or expired authentication token.",
-        });
+    // Configuration problems are server errors, not authentication failures.
+    if (error instanceof ApiError) {
+      return next(error);
     }
+
+    console.error(
+      "JWT verification failed:",
+      error instanceof Error ? error.message : error
+    );
+
+    return res.status(401).json({
+      success: false,
+      message: "Invalid or expired token.",
+    });
+  }
 }

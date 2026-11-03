@@ -119,7 +119,7 @@ export async function updateBook(
       });
     }
 
-    const updatedBook = await updateBookById(id, req.body);
+    const updatedBook = await updateBookById(id, req.body, user.email);
 
     if (!updatedBook) {
       return res.status(404).json({
@@ -163,7 +163,7 @@ export async function deleteBook(
     }
 
     // Only the authenticated owner can delete their book.
-    const result = await deleteBookById(id);
+    const result = await deleteBookById(id, user.email);
 
     if (!result.success) {
       switch (result.reason) {
@@ -176,7 +176,13 @@ export async function deleteBook(
         case "NOT_FOUND":
           return res.status(404).json({
             success: false,
-            message: "Book not found or you are not the owner.",
+            message: "Book not found.",
+          });
+
+        case "NOT_OWNER":
+          return res.status(403).json({
+            success: false,
+            message: "You can only delete your own books.",
           });
 
         case "BOOK_BORROWED":
@@ -184,6 +190,13 @@ export async function deleteBook(
             success: false,
             message: "Cannot delete this book because it has borrowing records.",
             borrowedCopies: result.borrowedCopies,
+          });
+
+        case "DELETE_CONFLICT":
+          return res.status(409).json({
+            success: false,
+            message:
+              "Book could not be deleted because it is currently being borrowed.",
           });
 
         default:

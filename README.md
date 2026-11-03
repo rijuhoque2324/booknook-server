@@ -114,17 +114,40 @@ A book contains the following information:
 
 ## 🌐 Deployment
 
-The backend is designed to be deployed on **Render**.
+The backend is deployed on **Vercel** as a Node.js serverless function.
+
+The Express app is exposed through `api/index.ts`, and `vercel.json` rewrites
+every request to that function.
+
+### Steps
 
 1. Push the backend repository to GitHub.
-2. Create a new Web Service on Render.
-3. Connect the GitHub repository.
-4. Configure the build and start commands from `package.json`.
-5. Add all required production environment variables.
-6. Connect your MongoDB Atlas database.
-7. Deploy the service.
+2. Import the repository in Vercel (framework preset: **Other**).
+3. Build command: `npm run build`. Output: none (serverless functions only).
+4. Add the environment variables below.
+5. Deploy. Vercel prints the public API URL, e.g. `https://booknook-server.vercel.app`.
 
-Update the frontend API URL and JWT configuration to use the deployed production URLs.
+### Environment variables
+
+| Variable | Description |
+|---|---|
+| `MONGODB_URI` | MongoDB Atlas connection string (transactions require a replica set). |
+| `MONGODB_DB_NAME` | Database name, e.g. `booknook`. |
+| `CLIENT_URL` | Allowed frontend origin(s), comma-separated for preview deployments. |
+| `JWT_JWKS_URL` | Better Auth JWKS endpoint, e.g. `https://<client>/api/auth/jwks`. |
+| `JWT_ISSUER` | Must match the Better Auth JWT issuer (the client URL). |
+| `JWT_AUDIENCE` | Must match the Better Auth JWT audience (this API's URL). |
+
+`PORT` is not used on Vercel; the platform handles listening.
+
+After deploying, set the client's `NEXT_PUBLIC_API_URL` / `API_URL` to the
+Vercel API URL and redeploy the client so the JWT audience matches.
+
+Verify the deployment:
+
+```text
+GET https://booknook-server.vercel.app/health
+```
 
 ## 🔒 Security
 

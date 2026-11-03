@@ -1,5 +1,6 @@
 import { ObjectId } from "mongodb";
 import { getDB } from "../config/db.js";
+import { ApiError } from "../utils/api-error.js";
 import type { CreateBookInput, UpdateBookInput } from "../validators/book.validator.js";
 
 // GET all books
@@ -63,7 +64,8 @@ export async function createNewBook(
 // PATCH update book
 export async function updateBookById(
   id: string,
-  bookData: UpdateBookInput
+  bookData: UpdateBookInput,
+  ownerEmail: string
 ) {
   if (!ObjectId.isValid(id)) {
     return null;
@@ -83,6 +85,11 @@ export async function updateBookById(
     return null;
   }
 
+  // Only the authenticated owner can update their book.
+  if (existingBook.ownerEmail !== ownerEmail) {
+    throw new ApiError(403, "You can only update your own books.");
+  }
+
   // Calculate borrowed copies
   const borrowedCopies =
     existingBook.totalCopies - existingBook.availableCopies;
@@ -92,7 +99,8 @@ export async function updateBookById(
     bookData.totalCopies !== undefined &&
     bookData.totalCopies < borrowedCopies
   ) {
-    throw new Error(
+    throw new ApiError(
+      409,
       `Cannot reduce total copies below ${borrowedCopies} borrowed copies.`
     );
   }
@@ -118,7 +126,7 @@ export async function updateBookById(
 }
 
 // DELETE book by ID
-export async function deleteBookById(id: string) {
+export async function deleteBookById(id: string, ownerEmail: string) {
   if (!ObjectId.isValid(id)) {
     return {
       success: false,
@@ -140,6 +148,14 @@ export async function deleteBookById(id: string) {
     };
   }
 
+  // Only the authenticated owner can delete their book.
+  if (book.ownerEmail !== ownerEmail) {
+    return {
+      success: false,
+      reason: "NOT_OWNER",
+    };
+  }
+
   const borrowedCopies =
     book.totalCopies - book.availableCopies;
 
@@ -151,10 +167,18 @@ export async function deleteBookById(id: string) {
     };
   }
 
-  await db.collection("books").deleteOne({
+  // Guard against a new borrow being created between the check and delete.
+  const deleteResult = await db.collection("books").deleteOne({
     _id: objectId,
     availableCopies: book.totalCopies,
   });
+
+  if (deleteResult.deletedCount !== 1) {
+    return {
+      success: false,
+      reason: "DELETE_CONFLICT",
+    };
+  }
 
   return {
     success: true,
