@@ -6,6 +6,10 @@ interface MongoError {
   code?: number;
 }
 
+interface BodyParserError {
+  status?: number;
+}
+
 export const errorHandler: ErrorRequestHandler = (
   error,
   _req,
@@ -32,6 +36,17 @@ export const errorHandler: ErrorRequestHandler = (
     res.status(409).json({
       success: false,
       message: "A record with these values already exists.",
+    });
+    return;
+  }
+
+  // Malformed or oversized request bodies are client errors.
+  const status = (error as BodyParserError | null)?.status;
+
+  if (typeof status === "number" && status >= 400 && status < 500) {
+    res.status(status).json({
+      success: false,
+      message: "Invalid request body.",
     });
     return;
   }

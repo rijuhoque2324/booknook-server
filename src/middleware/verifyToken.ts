@@ -37,10 +37,11 @@ function getJwtConfig(): JwtConfig {
   const audience = process.env.JWT_AUDIENCE;
 
   if (!jwksUrl || !issuer || !audience) {
-    throw new ApiError(
-      500,
-      "Authentication is not configured on the server. Set JWT_JWKS_URL, JWT_ISSUER and JWT_AUDIENCE."
+    console.error(
+      "Authentication is not configured. Set JWT_JWKS_URL, JWT_ISSUER and JWT_AUDIENCE."
     );
+
+    throw new ApiError(500, "Authentication is not configured on the server.");
   }
 
   cachedConfig = {
@@ -78,9 +79,11 @@ export async function verifyToken(
       });
     }
 
+    // Better Auth signs with EdDSA; reject tokens using any other algorithm.
     const { payload } = await jwtVerify(token, jwks, {
       issuer,
       audience,
+      algorithms: ["EdDSA"],
     });
 
     if (

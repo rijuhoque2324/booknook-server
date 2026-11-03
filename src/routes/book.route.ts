@@ -3,6 +3,7 @@ import { Router } from "express";
 
 import {
   getBooks,
+  getMyBooks,
   getSingleBook,
   createBook,
   updateBook,
@@ -14,13 +15,22 @@ import { validateRequest } from "../middleware/validate.middleware.js";
 
 import {
   createBookSchema,
+  listBooksQuerySchema,
   updateBookSchema,
 } from "../validators/book.validator.js";
 
 const router = Router();
 
 // Public routes
-router.get("/", getBooks);
+router.get(
+  "/",
+  validateRequest(listBooksQuerySchema, "query"),
+  getBooks
+);
+
+// Must stay above "/:id" so "mine" is not treated as a book ID.
+router.get("/mine", verifyToken, getMyBooks);
+
 router.get("/:id", getSingleBook);
 
 // Protected routes

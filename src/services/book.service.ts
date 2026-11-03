@@ -3,13 +3,39 @@ import { getDB } from "../config/db.js";
 import { ApiError } from "../utils/api-error.js";
 import type { CreateBookInput, UpdateBookInput } from "../validators/book.validator.js";
 
-// GET all books
-export async function getAllBooks() {
+// Owner emails must not be exposed on public endpoints.
+const PUBLIC_BOOK_PROJECTION = { ownerEmail: 0 };
+
+// Matches slugs like "self-development" to "Self Development".
+const CATEGORY_COLLATION = {
+  locale: "en",
+  strength: 2,
+  alternate: "shifted",
+} as const;
+
+// GET all books, optionally filtered by category
+export async function getAllBooks(category?: string) {
+  const db = await getDB();
+
+  const cursor = category
+    ? db
+        .collection("books")
+        .find({ category }, { collation: CATEGORY_COLLATION })
+    : db.collection("books").find({});
+
+  return cursor
+    .project(PUBLIC_BOOK_PROJECTION)
+    .sort({ createdAt: -1 })
+    .toArray();
+}
+
+// GET books owned by a user
+export async function getBooksByOwner(ownerEmail: string) {
   const db = await getDB();
 
   return db
     .collection("books")
-    .find({})
+    .find({ ownerEmail })
     .sort({ createdAt: -1 })
     .toArray();
 }
@@ -22,9 +48,10 @@ export async function getBookById(id: string) {
 
   const db = await getDB();
 
-  const book = await db.collection("books").findOne({
-    _id: new ObjectId(id),
-  });
+  const book = await db.collection("books").findOne(
+    { _id: new ObjectId(id) },
+    { projection: PUBLIC_BOOK_PROJECTION }
+  );
 
   return book;
 }

@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import { rateLimit } from "express-rate-limit";
 import helmet from "helmet";
 import morgan from "morgan";
 
@@ -36,12 +37,30 @@ app.use(
 
       callback(null, false);
     },
-    credentials: true,
+    // Auth uses bearer tokens, so browsers never need to send cookies here.
+    methods: ["GET", "POST", "PATCH", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+
+// Limit writes per client IP. Reads are exempt because the Next.js server
+// fetches books from a shared IP. Counts are per serverless instance.
+app.use(
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 60,
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+    skip: (req) => ["GET", "HEAD", "OPTIONS"].includes(req.method),
+    message: {
+      success: false,
+      message: "Too many requests. Please try again later.",
+    },
   })
 );
 
 // Middleware
-app.use(express.json());
+app.use(express.json({ limit: "16kb" }));
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 
 // Root / health check

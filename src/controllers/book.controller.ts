@@ -7,16 +7,48 @@ import {
   updateBookById,
   getAllBooks,
   getBookById,
+  getBooksByOwner,
 } from "../services/book.service.js";
 
 // GET all books
 export async function getBooks(
-  _req: Request,
+  req: Request,
   res: Response,
   next: NextFunction
 ) {
   try {
-    const books = await getAllBooks();
+    // Already validated as an optional string by listBooksQuerySchema.
+    const category = req.query.category as string | undefined;
+
+    const books = await getAllBooks(category?.trim());
+
+    return res.status(200).json({
+      success: true,
+      message: "Books retrieved successfully",
+      data: books,
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+// GET books owned by the logged-in user
+export async function getMyBooks(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const user = req.user;
+
+    if (!user?.email) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required.",
+      });
+    }
+
+    const books = await getBooksByOwner(user.email);
 
     return res.status(200).json({
       success: true,
