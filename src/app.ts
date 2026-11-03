@@ -6,6 +6,7 @@ import morgan from "morgan";
 import bookRoutes from "./routes/book.route.js";
 import borrowRoutes from "./routes/borrow.route.js";
 import { errorHandler } from "./middleware/error.middleware.js";
+import { ensureBootstrap } from "./config/bootstrap.js";
 
 export const app = express();
 
@@ -63,6 +64,16 @@ app.get("/health", (_req, res) => {
   });
 });
 
+// API routes are only reachable once the database is ready.
+app.use(async (_req, _res, next) => {
+  try {
+    await ensureBootstrap();
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
 // API routes
 app.use("/books", bookRoutes);
 app.use("/borrows", borrowRoutes);
@@ -77,3 +88,6 @@ app.use((_req, res) => {
 
 // Central error handler (must be registered last).
 app.use(errorHandler);
+
+// Vercel's Express preset expects a default export that is a function/server.
+export default app;
