@@ -1,8 +1,10 @@
+
 import type { Request, Response, NextFunction } from "express";
 
-import { createNewBook, deleteBookById, updateBookById } from "../services/book.service.js";
-
 import {
+  createNewBook,
+  deleteBookById,
+  updateBookById,
   getAllBooks,
   getBookById,
 } from "../services/book.service.js";
@@ -16,13 +18,13 @@ export async function getBooks(
   try {
     const books = await getAllBooks();
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Books retrieved successfully",
       data: books,
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 }
 
@@ -34,54 +36,62 @@ export async function getSingleBook(
 ) {
   try {
     const id = req.params.id;
+
     if (typeof id !== "string") {
-      res.status(400).json({
+      return res.status(400).json({
         success: false,
         message: "Invalid book ID",
       });
-      return;
     }
 
     const book = await getBookById(id);
 
     if (!book) {
-      res.status(404).json({
+      return res.status(404).json({
         success: false,
         message: "Book not found",
       });
-      return;
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Book retrieved successfully",
       data: book,
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 }
-// POST create new book
 
+// POST create new book
 export async function createBook(
   req: Request,
   res: Response,
   next: NextFunction
 ) {
   try {
-    const user = (req as Request & { user: { name: string; email: string } }).user;
+    const user = req.user;
+
+    if (!user?.email) {
+      return res.status(401).json({
+        success: false,
+        message: "Authenticated user information is missing.",
+      });
+    }
+
     const book = await createNewBook(req.body, {
-      name: user.name,
+      name: user.name || user.email,
       email: user.email,
     });
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       message: "Book created successfully",
       data: book,
     });
   } catch (error) {
-    next(error);
+    console.error("CREATE BOOK CONTROLLER ERROR:", error);
+    return next(error);
   }
 }
 
@@ -93,32 +103,38 @@ export async function updateBook(
 ) {
   try {
     const id = req.params.id;
+    const user = req.user;
 
     if (typeof id !== "string") {
-      res.status(400).json({
+      return res.status(400).json({
         success: false,
         message: "Invalid book ID",
       });
-      return;
+    }
+
+    if (!user?.email) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required.",
+      });
     }
 
     const updatedBook = await updateBookById(id, req.body);
 
     if (!updatedBook) {
-      res.status(404).json({
+      return res.status(404).json({
         success: false,
         message: "Book not found",
       });
-      return;
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Book updated successfully",
       data: updatedBook,
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 }
 
@@ -130,49 +146,60 @@ export async function deleteBook(
 ) {
   try {
     const id = req.params.id;
+    const user = req.user;
 
     if (typeof id !== "string") {
-      res.status(400).json({
+      return res.status(400).json({
         success: false,
         message: "Invalid book ID",
       });
-      return;
     }
 
-    const result = await deleteBookById(id);
+    if (!user?.email) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required.",
+      });
+    }
+
+    // Only the authenticated owner can delete their book.
+    const result = await deleteBookById(id, user.email);
 
     if (!result.success) {
-      if (result.reason === "INVALID_ID") {
-        res.status(400).json({
-          success: false,
-          message: "Invalid book ID",
-        });
-        return;
-      }
+      switch (result.reason) {
+        case "INVALID_ID":
+          return res.status(400).json({
+            success: false,
+            message: "Invalid book ID.",
+          });
 
-      if (result.reason === "NOT_FOUND") {
-        res.status(404).json({
-          success: false,
-          message: "Book not found",
-        });
-        return;
-      }
+        case "NOT_FOUND":
+          return res.status(404).json({
+            success: false,
+            message: "Book not found or you are not the owner.",
+          });
 
-      if (result.reason === "BOOK_BORROWED") {
-        res.status(409).json({
-          success: false,
-          message: "Cannot delete this book because copies are currently borrowed.",
-          borrowedCopies: result.borrowedCopies,
-        });
-        return;
+        case "BOOK_BORROWED":
+          return res.status(409).json({
+            success: false,
+            message: "Cannot delete this book because it has borrowing records.",
+            borrowedCopies: result.borrowedCopies,
+          });
+
+        default:
+          return res.status(500).json({
+            success: false,
+            message: "Unable to delete book.",
+          });
       }
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      message: "Book deleted successfully",
+      message: "Book deleted successfully.",
     });
   } catch (error) {
-    next(error);
+    console.error("DELETE BOOK CONTROLLER ERROR:", error);
+    return next(error);
   }
 }

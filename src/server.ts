@@ -3,6 +3,7 @@ import "dotenv/config";
 
 import { app } from "./app.js";
 import { connectDB, client } from "./config/db.js";
+import { ensureBorrowIndexes } from "./services/borrow.service.js";
 
 const PORT = Number(process.env.PORT) || 5000;
 
@@ -11,7 +12,9 @@ async function startServer(): Promise<void> {
     // Step 1: Connect MongoDB
     await connectDB();
 
-    console.log("MongoDB connected successfully!");
+    console.log("MongoDB connected successfully!");    
+
+    await ensureBorrowIndexes();
 
     // Step 2: Start Express server
     const server = app.listen(PORT, () => {

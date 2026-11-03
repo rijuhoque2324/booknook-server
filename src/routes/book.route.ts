@@ -7,7 +7,9 @@ import {
   getSingleBook,
   createBook,
   updateBook,
+  deleteBook ,
 } from "../controllers/book.controller.js";
+import { verifyToken } from "../middleware/verifyToken.js";
 
 const router = Router();
 
@@ -18,9 +20,17 @@ router.get("/", getBooks);
 router.get("/:id", getSingleBook);
 
 // POST /books
-router.post("/", validateRequest(createBookSchema), createBook);
+router.post(
+  "/",
+  verifyToken,
+  validateRequest(createBookSchema),
+  createBook
+);
 
 // PATCH /books/:id
 router.patch("/:id", validateRequest(updateBookSchema), updateBook);
+
+//Delete book
+router.delete("/:id", verifyToken, deleteBook);
 
 export default router;

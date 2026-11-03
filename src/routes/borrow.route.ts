@@ -1,20 +1,38 @@
 import { Router } from "express";
 
+import { validateRequest } from "../middleware/validate.middleware.js";
+import { verifyToken } from "../middleware/verifyToken.js";
+
+import {
+  createBorrowSchema,
+  returnBorrowSchema,
+} from "../validators/borrow.validator.js";
+
+import {
+  createBorrowController,
+  getMyBorrowsController,
+  returnBorrowController,
+} from "../controllers/borrow.controller.js";
+
 const router = Router();
 
-// POST /borrows
-router.post("/", (req, res) => {
-  res.json({ message: "Borrow book" });
-});
+router.use(verifyToken);
 
-// GET /borrows
-router.get("/", (req, res) => {
-  res.json({ message: "Get borrow history" });
-});
+router.post(
+  "/",
+  validateRequest(createBorrowSchema),
+  createBorrowController
+);
 
-// DELETE /borrows/:id
-router.delete("/:id", (req, res) => {
-  res.json({ message: "Return book" });
-});
+router.get(
+  "/",
+  getMyBorrowsController
+);
+
+router.delete(
+  "/:id",
+  validateRequest(returnBorrowSchema),
+  returnBorrowController
+);
 
 export default router;
